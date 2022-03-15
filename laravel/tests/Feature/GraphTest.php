@@ -18,6 +18,12 @@ class GraphTest extends TestCase
 
     public function test_create_query_destroy_subject(): void
     {
+        $user = User::factory()->make();
+
+        Sanctum::actingAs(
+            $user,
+        );
+
         $subject = Subject::factory()->create();
         // $this->testUserId = $subject->id;
         $response = $this->graphQL(/** @lang GraphQL */ '
