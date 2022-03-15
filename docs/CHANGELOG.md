@@ -27,7 +27,7 @@
    - This will allow us to scope the subjects table down to only allowed records
 
 ## Notes
-- I didnt have time to complete User story 4 unfortuneatly am curious to know how that can be implemented though
+- I didnt have time to complete User story 4 unfortuneatly, but am curious to know how that can be implemented though
 
 ## Wiki
 1. Open  http://localhost:3000 in your prefered browser
