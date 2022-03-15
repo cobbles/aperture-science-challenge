@@ -28,7 +28,12 @@
 
 ## Notes
 - I didnt have time to complete User story 4 unfortuneatly, but am curious to know how that can be implemented though
-
+- I was unable to run the cypress tests even when using a fresh environment from the original commit this was there error i was getting
+```bash
+cypress  | Cypress failed to verify that your server is running.
+cypress  |
+cypress  | Please start this server and then run Cypress again.
+```
 ## Wiki
 1. Open  http://localhost:3000 in your prefered browser
 2. Login using
