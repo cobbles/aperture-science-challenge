@@ -39,10 +39,14 @@ Subjects.getInitialProps = ({ req, res }: NextPageContext) => {
 export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname: string, protocol:string}) {
   const router = useRouter();
   const [ authenticated, setAuth ] = useState<Boolean>(!!props.XSRF_TOKEN);
-  const [ subjects, setSubjects ] = useState<Array<Subject>>();
   const [ message, setErrorMessage ] = useState<string>('');
   const [cookie, setCookie, removeCookie] = useCookies(["XSRF-TOKEN"])
   const api = `${props.protocol}//${props.hostname}`;
+
+  // Table State
+  const [ subjects, setSubjects ] = useState<Array<Subject>>();
+  const [ currentPage, setCurrentPage ] = useState<number>(1);
+  const [ lastPage, setLastPage ] = useState<number>(1);
 
   // Form State
   const [showForm, setShowForm] = useState<boolean>(false);
@@ -55,10 +59,11 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
 
   // Handlers
   const handleToggleForm = (subject: Subject) => {
+    const dob = subject.date_of_birth ? formatISODate(subject.date_of_birth) : "";
     setId(subject.id);
     setName(subject.name);
     setTestChamber(subject.test_chamber);
-    setDateOfBirth(subject.date_of_birth);
+    setDateOfBirth(dob);
     setScore(subject.score);
     setAlive(subject.alive);
     setShowForm(!showForm)
@@ -88,6 +93,10 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
     return `${date.getDate()}/${date.getMonth()+1}/${date.getFullYear()}`;
   }
 
+  const formatISODate = (dateStr: string) => {
+    return new Date(dateStr).toISOString().substring(0,10);
+  }
+
   useEffect(() => {
     if (authenticated) {
       fetchSubjects();
@@ -95,21 +104,29 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
       router.push('/');
       return;
     }
-  }, [authenticated]);
+  }, [authenticated, currentPage]);
 
   const fetchSubjects = () => {
     const query = `
       query {
-        subjects {id name test_chamber date_of_birth score alive created_at}
+        subjects(page: ${currentPage}) {
+          data {id name test_chamber date_of_birth score alive created_at}
+          paginatorInfo {currentPage lastPage}
+        }
       }
     `;
 
     axios
       .post(`${api}/graphql`, { query }, { withCredentials: true })
       .then((response) => {
-        const { subjects = [] } = response.data?.data;
+        const subjects = response.data?.data?.subjects.data;
+        const paginatorInfo = response.data?.data?.subjects.paginatorInfo;
         if (subjects && subjects.length > 0) {
           setSubjects(subjects as Subject[]);
+        }
+        if (paginatorInfo) {
+          setCurrentPage(paginatorInfo.currentPage as number);
+          setLastPage(paginatorInfo.lastPage as number);
         }
       })
       .catch((e) => {
@@ -130,9 +147,11 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
 
   const saveSubject = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // Inject a id param if we are update a subject
+    const idParam = id ? `id: ${id}` : ''
     const query = `
       mutation {
-        upsertSubject(name: "${name}", date_of_birth: "${dateOfBirth}", test_chamber: ${testChamber}, score: ${score}, alive: ${alive}) {
+        upsertSubject(${idParam}, name: "${name}", date_of_birth: "${dateOfBirth}", test_chamber: ${testChamber}, score: ${score}, alive: ${alive}) {
           id
           name
           date_of_birth
@@ -162,6 +181,7 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
   const renderForm = () => {
     return (
       <form data-testid="subject-form" onSubmit={saveSubject}>
+        <h2>{id ? `EDIT SUBJECT: ${id}` : "CREATE SUBJECT"}</h2>
         <div className="inputGroup">
           <label>Name:</label>
           <input
@@ -176,9 +196,8 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
           <input
             type="date"
             required
-            onChange={(e) => setDateOfBirth(e.target.value)}
-            // value expects date in format yyyy-mm-dd
-            value={dateOfBirth ? new Date(dateOfBirth).toISOString().substring(0,10) : ""}
+            onChange={(e) => setDateOfBirth(formatISODate(e.target.value))}
+            value={dateOfBirth}
           />
         </div>
         <div className="inputGroup">
@@ -215,7 +234,7 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
   };
 
   const renderTable = () => {
-    const cols = ["ID", "Name", "DOB", "Alive", "Score", "Test Chamber"];
+    const cols = ["ID", "Name", "DOB", "Alive", "Score", "Test Chamber", "Actions"];
     const placeholder = Array(10).fill(
       <tr>{Array(cols.length).fill(<td>&nbsp;</td>)}</tr>
     );
@@ -227,6 +246,11 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
         <td>{subject.alive ? "Y" : "N"}</td>
         <td>{subject.score}</td>
         <td>{subject.test_chamber}</td>
+        <td>
+          <button data-testid="subject-form-edit-btn" onClick={() => handleToggleForm(subject)}>
+            edit
+          </button>
+        </td>
       </tr>
     ));
     return (
@@ -242,6 +266,19 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
           <tbody>
             {subjects && subjects.length > 0 ? subjectRows : placeholder}
           </tbody>
+          <tfoot>
+            <tr>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+              <td rowSpan={cols.length}>
+                <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>previous</button>
+                <span>Page:{currentPage} / {lastPage}</span>
+                <button onClick={() => setCurrentPage(Math.min(lastPage, currentPage + 1))}>next</button>
+              </td>
+              <td>&nbsp;</td>
+              <td>&nbsp;</td>
+            </tr>
+        </tfoot>
         </table>
       </div>
     );

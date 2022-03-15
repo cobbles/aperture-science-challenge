@@ -13,4 +13,5 @@
 - Refactored rendering for subjects component to have functions for displaying form and list
 - Added form toggle button
 - Added create new testing subjects record form (User story 1 complete)
-
+- Added edit test subject record form (User story 1 complete))
+- Added Pagination to test subjects table
