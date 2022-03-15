@@ -12,3 +12,5 @@
 - Add @guard directive to subjects graphql queries so queries get authenticated ref: https://lighthouse-php.com/5/api-reference/directives.html#guard
 - Refactored rendering for subjects component to have functions for displaying form and list
 - Added form toggle button
+- Added create new testing subjects record form (User story 1 complete)
+

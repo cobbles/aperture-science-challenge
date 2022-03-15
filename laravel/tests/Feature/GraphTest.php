@@ -104,4 +104,41 @@ class GraphTest extends TestCase
         $users = json_decode($response->json)->data->users->data;
         $this->assertCount(1, $users);
     }
+
+    /**
+     * Try to query Users as authenticated user, be successful.
+     *
+     * @return void
+     */
+
+    public function testQueryCreateSubject(): void
+    {
+        $user = User::factory()->make();
+
+        Sanctum::actingAs(
+            $user,
+        );
+
+        $response = $this->graphQL(/** @lang GraphQL */ '
+            mutation {
+                upsertSubject(
+                    name: "Test A",
+                    date_of_birth: "1990-10-13",
+                    test_chamber: 1,
+                    score: 22,
+                    alive: true) {
+                    id
+                    name
+                    date_of_birth
+                    test_chamber
+                    score
+                    alive
+                    created_at
+                }
+            }
+        ')->decodeResponseJson();
+
+        $subject = json_decode($response->json)->data->upsertSubject;
+        $this->assertEquals("Test A", $subject->name);
+    }
 }

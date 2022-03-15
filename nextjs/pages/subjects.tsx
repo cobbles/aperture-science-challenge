@@ -9,7 +9,7 @@ import { useRouter } from 'next/router'
 import Layout from "../components/layout"
 
 interface Subject {
-  id: number,
+  id?: number,
   name: string,
   test_chamber?: number,
   date_of_birth?: string,
@@ -18,6 +18,17 @@ interface Subject {
   created_at?: string,
   updated_at?: string
 }
+
+const emptySubject: Subject = {
+  id: undefined,
+  name: "",
+  test_chamber: undefined,
+  date_of_birth: "",
+  score: undefined,
+  alive: false,
+  created_at: undefined,
+  updated_at: undefined,
+};
 
 Subjects.getInitialProps = ({ req, res }: NextPageContext) => {
   const cookies = parseCookies(req);
@@ -35,10 +46,21 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
 
   // Form State
   const [showForm, setShowForm] = useState<boolean>(false);
-
+  const [id, setId] = useState<number | undefined>();
+  const [name, setName] = useState<string>("");
+  const [testChamber, setTestChamber] = useState<number | undefined>();
+  const [dateOfBirth, setDateOfBirth] = useState<string | undefined>();
+  const [alive, setAlive] = useState<boolean | undefined>();
+  const [score, setScore] = useState<number | undefined>();
 
   // Handlers
-  const handleToggleForm = () => {
+  const handleToggleForm = (subject: Subject) => {
+    setId(subject.id);
+    setName(subject.name);
+    setTestChamber(subject.test_chamber);
+    setDateOfBirth(subject.date_of_birth);
+    setScore(subject.score);
+    setAlive(subject.alive);
     setShowForm(!showForm)
   }
 
@@ -68,71 +90,126 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
 
   useEffect(() => {
     if (authenticated) {
-      axios.post(
-        `${api}/graphql`,
-        {
-          query: `
-              query {
-                subjects {
-                  id
-                  name
-                  test_chamber
-                  date_of_birth
-                  score
-                  alive
-                  created_at
-                }
-              }
-            `
-        },
-        { withCredentials: true }
-      ).then(response => {
-        const { subjects = [] } = response.data?.data;
-        if (subjects && subjects.length > 0) {
-          return setSubjects(subjects as Subject[]);
-        }
-      }).catch((e) => {
-        console.log(e);
-        if (e.response?.data?.message) {
-          if (e.response?.data?.message === "CSRF token mismatch.") {
-            return setErrorMessage("Your session has expired, please log in again.");
-          } else {
-            return setErrorMessage(e.response?.data?.message);
-          }
-        } else {
-          return setErrorMessage('An error occurred, please try again later.')
-        }
-      })
+      fetchSubjects();
     } else {
       router.push('/');
       return;
     }
   }, [authenticated]);
 
+  const fetchSubjects = () => {
+    const query = `
+      query {
+        subjects {id name test_chamber date_of_birth score alive created_at}
+      }
+    `;
+
+    axios
+      .post(`${api}/graphql`, { query }, { withCredentials: true })
+      .then((response) => {
+        const { subjects = [] } = response.data?.data;
+        if (subjects && subjects.length > 0) {
+          setSubjects(subjects as Subject[]);
+        }
+      })
+      .catch((e) => {
+        console.log(e);
+        if (e.response?.data?.message) {
+          if (e.response?.data?.message === "CSRF token mismatch.") {
+            return setErrorMessage(
+              "Your session has expired, please log in again."
+            );
+          } else {
+            return setErrorMessage(e.response?.data?.message);
+          }
+        } else {
+          return setErrorMessage("An error occurred, please try again later.");
+        }
+      });
+  };
+
+  const saveSubject = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = `
+      mutation {
+        upsertSubject(name: "${name}", date_of_birth: "${dateOfBirth}", test_chamber: ${testChamber}, score: ${score}, alive: ${alive}) {
+          id
+          name
+          date_of_birth
+          test_chamber
+          score
+          alive
+          created_at
+        }
+      }
+    `;
+
+    axios
+      .post(
+        `${api}/graphql`,
+        { query },
+        { withCredentials: true }
+      )
+      .then((response) => {
+        fetchSubjects();
+        setShowForm(!showForm);
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+  };
+
   const renderForm = () => {
     return (
-      <form>
+      <form data-testid="subject-form" onSubmit={saveSubject}>
         <div className="inputGroup">
           <label>Name:</label>
-          <input type="text"/>
+          <input
+            type="text"
+            required
+            onChange={(e) => setName(e.target.value)}
+            value={name}
+          />
         </div>
         <div className="inputGroup">
           <label>DOB:</label>
-          <input type="date"/>
+          <input
+            type="date"
+            required
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            // value expects date in format yyyy-mm-dd
+            value={dateOfBirth ? new Date(dateOfBirth).toISOString().substring(0,10) : ""}
+          />
         </div>
         <div className="inputGroup">
           <label>Alive:</label>
-          <input type="checkbox"/>
+          <input
+            type="checkbox"
+            onChange={(e) => setAlive(!alive)}
+            checked={alive}
+          />
         </div>
         <div className="inputGroup">
           <label>Score:</label>
-          <input type="number"/>
+          <input
+            type="number"
+            required
+            pattern="\d*"
+            onChange={(e) => setScore(Number(e.target.value))}
+            value={score}
+          />
         </div>
         <div className="inputGroup">
           <label>Test Chamber:</label>
-          <input type="number"/>
+          <input
+            type="number"
+            required
+            pattern="\d*"
+            onChange={(e) => setTestChamber(Number(e.target.value))}
+            value={testChamber}
+          />
         </div>
-        <input type="submit" value="Submit" />
+        <input data-testid="subject-form-submit-btn" type="submit" value="Submit" />
       </form>
     );
   };
@@ -174,7 +251,7 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
     <Layout>
       <h1>Testing Subjects</h1>
       <section className={styles.content}>
-        <button onClick={() => handleToggleForm()}>
+        <button data-testid="subject-form-btn" onClick={() => handleToggleForm(emptySubject)}>
           {showForm ? "cancel" : "create"}
         </button>
         {(message && <p data-testid="error-msg">{message}</p>) ||
