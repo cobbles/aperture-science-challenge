@@ -15,3 +15,9 @@
 - Added create new testing subjects record form (User story 1 complete)
 - Added edit test subject record form (User story 1 complete))
 - Added Pagination to test subjects table
+- Added user_id fk relationship + updated laravel models
+
+## Asumptions
+- A "testing subject" persona/user refers to users stored in the "users" db table
+   - We therefore need to associated created test subject records with the logged in user
+   - This will allow us to scope the subjects table down to only allowed records
