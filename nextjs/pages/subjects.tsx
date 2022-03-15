@@ -33,6 +33,15 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
   const [cookie, setCookie, removeCookie] = useCookies(["XSRF-TOKEN"])
   const api = `${props.protocol}//${props.hostname}`;
 
+  // Form State
+  const [showForm, setShowForm] = useState<boolean>(false);
+
+
+  // Handlers
+  const handleToggleForm = () => {
+    setShowForm(!showForm)
+  }
+
   const logout = async () => {
     try {
       await axios({
@@ -100,69 +109,78 @@ export default function Subjects(props: NextPage & {XSRF_TOKEN: string, hostname
     }
   }, [authenticated]);
 
+  const renderForm = () => {
+    return (
+      <form>
+        <div className="inputGroup">
+          <label>Name:</label>
+          <input type="text"/>
+        </div>
+        <div className="inputGroup">
+          <label>DOB:</label>
+          <input type="date"/>
+        </div>
+        <div className="inputGroup">
+          <label>Alive:</label>
+          <input type="checkbox"/>
+        </div>
+        <div className="inputGroup">
+          <label>Score:</label>
+          <input type="number"/>
+        </div>
+        <div className="inputGroup">
+          <label>Test Chamber:</label>
+          <input type="number"/>
+        </div>
+        <input type="submit" value="Submit" />
+      </form>
+    );
+  };
+
+  const renderTable = () => {
+    const cols = ["ID", "Name", "DOB", "Alive", "Score", "Test Chamber"];
+    const placeholder = Array(10).fill(
+      <tr>{Array(cols.length).fill(<td>&nbsp;</td>)}</tr>
+    );
+    const subjectRows = subjects?.map((subject) => (
+      <tr key={subject.id}>
+        <td>{subject.id}</td>
+        <td>{subject.name}</td>
+        <td>{formatDate(subject.date_of_birth)}</td>
+        <td>{subject.alive ? "Y" : "N"}</td>
+        <td>{subject.score}</td>
+        <td>{subject.test_chamber}</td>
+      </tr>
+    ));
+    return (
+      <div className={styles.skeleton} data-testid="skeleton">
+        <table data-testid="subjects-table">
+          <thead>
+            <tr>
+              {cols.map((c) => (
+                <td>{c}</td>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {subjects && subjects.length > 0 ? subjectRows : placeholder}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   return (
     <Layout>
       <h1>Testing Subjects</h1>
       <section className={styles.content}>
-        {message && (
-          <p data-testid="error-msg">{message}</p>
-        )}
-        {subjects && subjects.length > 0 && (
-          <table data-testid="subjects-table">
-            <thead>
-              <tr>
-                <td>ID</td>
-                <td>Name</td>
-                <td>DOB</td>
-                <td>Alive</td>
-                <td>Score</td>
-                <td>Test Chamber</td>
-              </tr>
-            </thead>
-            <tbody>
-              {subjects.map(subject => (
-                <tr key={subject.id}>
-                  <td>{subject.id}</td>
-                  <td>{subject.name}</td>
-                  <td>{formatDate(subject.date_of_birth)}</td>
-                  <td>{subject.alive ? 'Y' : 'N'}</td>
-                  <td>{subject.score}</td>
-                  <td>{subject.test_chamber}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {!subjects && !message && (
-          <div className={styles.skeleton} data-testid="skeleton">
-            <table>
-            <thead>
-              <tr>
-                <td>ID</td>
-                <td>Name</td>
-                <td>DOB</td>
-                <td>Alive</td>
-                <td>Score</td>
-                <td>Test Chamber</td>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from(Array(10).keys()).map(subject => (
-                <tr key={subject}>
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
-                  <td>&nbsp;</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        )}
+        <button onClick={() => handleToggleForm()}>
+          {showForm ? "cancel" : "create"}
+        </button>
+        {(message && <p data-testid="error-msg">{message}</p>) ||
+          (showForm ? renderForm() : renderTable())}
         {authenticated && <button onClick={logout}>Log out</button>}
       </section>
     </Layout>
-  )
+  );
 }
