@@ -24,5 +24,14 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('ISawDeer'),
             'remember_token' => Str::random(10),
         ]);
+
+        // new user
+        DB::table('users')->insert([
+            'name' => 'New User',
+            'email' => 'new@user.com',
+            'email_verified_at' => now(),
+            'password' => bcrypt('secret'),
+            'remember_token' => Str::random(10),
+        ]);
     }
 }

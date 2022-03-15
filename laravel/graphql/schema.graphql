@@ -7,7 +7,7 @@ scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date
 type Query {
     users: [User!]! @paginate(defaultCount: 10) @guard
     user(id: ID @eq): User @find @guard
-    subjects(orderBy: _ @orderBy(columns: ["created_at"])): [Subject!]! @paginate(defaultCount: 10) @guard
+    subjects(orderBy: _ @orderBy(columns: ["created_at"])): [Subject!]! @paginate(defaultCount: 10) @whereAuth(relation: "user") @guard
     subject(id: ID @eq): Subject @find @guard
     me: User @auth
 }
@@ -34,4 +34,5 @@ type Subject {
     alive: Boolean!
     created_at: DateTime!
     updated_at: DateTime!
+    user: User
 }

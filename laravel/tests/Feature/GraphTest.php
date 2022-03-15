@@ -194,4 +194,37 @@ class GraphTest extends TestCase
         $this->assertEquals($subject->id, $subjectUpdated->id);
         $this->assertEquals("Test A {Updated}", $subjectUpdated->name);
     }
+
+    public function testQueryCreateSubjectBelongsToLoggedInUser(): void
+    {
+        $user = User::first();
+        Sanctum::actingAs(
+            $user,
+        );
+
+        $response = $this->graphQL(/** @lang GraphQL */ '
+            mutation {
+                upsertSubject(
+                    name: "Test A",
+                    date_of_birth: "1990-10-13",
+                    test_chamber: 1,
+                    score: 22,
+                    alive: true) {
+                    id
+                    name
+                    date_of_birth
+                    test_chamber
+                    score
+                    alive
+                    created_at
+                    user {
+                        id
+                    }
+                }
+            }
+        ')->decodeResponseJson();
+
+        $subject = json_decode($response->json)->data->upsertSubject;
+        $this->assertEquals($subject->user->id, $user->id);
+    }
 }
